@@ -21,14 +21,28 @@ cap = cv2.VideoCapture(r'C:\aszkola\6 sem\cyfrowe przetwarzanie obrazow\CPO_VSLA
 if os.environ['COMPUTERNAME'] == 'LAPTOP-5E0LJ6KE': # dla laptopa Bartka
     cap = cv2.VideoCapture(r'szczeki1.mp4')
 
-K = np.array([ 
-[1080,0,972], #fx, 0, cx 
-[0,1080,1296], #0, fy, cy 
-[0,0,1]], #0,0,1 
-dtype = np.float32) 
+# K = np.array([ 
+# [1080,0,972], #fx, 0, cx 
+# [0,1080,1296], #0, fy, cy 
+# [0,0,1]], #0,0,1 
+# dtype = np.float32) 
+# 
+
+_, frame = cap.read()
+
+w, h = frame.shape[:2]
+
+fx = fy = 0.8 * w   
+cx = w / 2
+cy = h / 2
+
+K = np.array([
+    [fx, 0, cx],
+    [0, fy, cy],
+    [0,  0,  1]
+], dtype=np.float32)
+
 distCoeffs = np.zeros(5)
-
-
 
 def main(detector = orb):
     # Capture first frame to initialize
@@ -107,12 +121,15 @@ def main(detector = orb):
         kp_prev, des_prev = kp, des
 
         
-        cv2.imshow('frame', img)
+        #cv2.imshow('frame', img)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):  # wyjście za pomocą klawisza 'Q'
-            break
+        # if cv2.waitKey(1) & 0xFF == ord('q'):  # wyjście za pomocą klawisza 'Q'
+        #      break
     cap.release()
-    cv2.destroyAllWindows()
+    #cv2.destroyAllWindows()
+    all_pts = np.vstack(global_points)
+    np.savetxt("cloud.txt", all_pts)
+
 
 if __name__ == "__main__":
     main(orb)
