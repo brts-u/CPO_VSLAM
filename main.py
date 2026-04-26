@@ -101,7 +101,8 @@ def main(detector = orb):
         Trel[:3,:3]=R
         Trel[:3,3] = T.flatten()
 
-        global_pose = global_pose @ np.linalg.inv(Trel)
+        #global_pose = global_pose @ np.linalg.inv(Trel)
+        global_pose = global_pose @ Trel
 
         P1 = K @ prev_pose[:3, :]
         P2 = K @ global_pose[:3, :]
