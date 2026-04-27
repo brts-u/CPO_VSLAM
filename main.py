@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import cv2
+import laspy
 
 def fast(zdj): # TODO: coś nie działa z detectAndCompute
     szareZdjecie = cv2.cvtColor(zdj, cv2.COLOR_BGR2GRAY)  # Konwersja obrazu do postaci zdjęcia w odcieniach szarości
@@ -19,7 +20,26 @@ def orb(zdj):
 
 cap = cv2.VideoCapture(r'C:\aszkola\6 sem\cyfrowe przetwarzanie obrazow\CPO_VSLAM\szczeki2.mp4')
 if os.environ['COMPUTERNAME'] == 'LAPTOP-5E0LJ6KE': # dla laptopa Bartka
-    cap = cv2.VideoCapture(r'szczeki1.mp4')
+    cap = cv2.VideoCapture(r'szczeki2.mp4')
+
+def write_las(points, file_path='pcd.laz'):
+    # Calculate offsets and scales
+    min_vals = np.min(points, axis=0)
+    max_vals = np.max(points, axis=0)
+    range_vals = max_vals - min_vals
+
+    # Set scale to fit the range within LAS limits
+    scale = range_vals / (2**31 - 1)  # Adjust scale to avoid overflow
+    scale[scale == 0] = 1  # Avoid division by zero for constant dimensions
+
+    header = laspy.LasHeader(point_format=3, version="1.2")
+    header.offsets = min_vals
+    header.scales = scale
+
+    las = laspy.LasData(header)
+    las.x, las.y, las.z = points[:, 0], points[:, 1], points[:, 2]
+
+    las.write(file_path)
 
 # K = np.array([ 
 # [1080,0,972], #fx, 0, cx 
@@ -122,14 +142,16 @@ def main(detector = orb):
         kp_prev, des_prev = kp, des
 
         
-        #cv2.imshow('frame', img)
+        cv2.imshow('frame', img)
 
-        # if cv2.waitKey(1) & 0xFF == ord('q'):  # wyjście za pomocą klawisza 'Q'
-        #      break
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # wyjście za pomocą klawisza 'Q'
+             break
     cap.release()
-    #cv2.destroyAllWindows()
+    cv2.destroyAllWindows()
+
+    print('Zapisywanie chmury punktów')
     all_pts = np.vstack(global_points)
-    np.savetxt("cloud.txt", all_pts)
+    write_las(all_pts)
 
 
 if __name__ == "__main__":
