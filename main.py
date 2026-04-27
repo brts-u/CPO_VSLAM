@@ -3,7 +3,13 @@ import numpy as np
 import cv2
 import laspy
 
-def fast(zdj): # TODO: coś nie działa z detectAndCompute
+video_file_name = r'szczeki2'
+
+cap = cv2.VideoCapture(r'C:\aszkola\6 sem\cyfrowe przetwarzanie obrazow\CPO_VSLAM\\' + video_file_name + '.mp4')
+if os.environ['COMPUTERNAME'] == 'LAPTOP-5E0LJ6KE': # dla laptopa Bartka
+    cap = cv2.VideoCapture(video_file_name + '.mp4')
+
+def fast(zdj):
     szareZdjecie = cv2.cvtColor(zdj, cv2.COLOR_BGR2GRAY)  # Konwersja obrazu do postaci zdjęcia w odcieniach szarości
     fast = cv2.FastFeatureDetector.create()
     kp = fast.detect(szareZdjecie, None)
@@ -19,10 +25,6 @@ def orb(zdj):
     kp, des = orb.detectAndCompute(szareZdjecie, None)
     img = cv2.drawKeypoints(szareZdjecie, kp, None, color=(255, 0, 0))
     return img, kp, des
-
-cap = cv2.VideoCapture(r'C:\aszkola\6 sem\cyfrowe przetwarzanie obrazow\CPO_VSLAM\szczeki2.mp4')
-if os.environ['COMPUTERNAME'] == 'LAPTOP-5E0LJ6KE': # dla laptopa Bartka
-    cap = cv2.VideoCapture(r'aula1.mp4')
 
 def write_las(points, file_path='pcd.laz'):
     # Calculate offsets and scales
@@ -110,7 +112,7 @@ def main(detector = orb):
         method=cv2.RANSAC, 
         prob=0.999, 
         threshold=1.0 
-        ) 
+        )
 
         inliers = inliers.ravel().astype(bool) 
         pts1_in = pts1[inliers] 
@@ -153,9 +155,13 @@ def main(detector = orb):
 
     print('Zapisywanie chmury punktów')
     all_pts = np.vstack(global_points)
-    np.savetxt('points.txt', all_pts, fmt='%.6f')
-    # write_las(all_pts, 'nowe.laz')
+    try:
+        write_las(all_pts, f'{video_file_name}_{detector.__name__}.laz')
+    except Exception as e:
+        print(f"Nie można zapisać do LAZ: {e}")
+        np.savetxt(f'{video_file_name}_{detector.__name__}.txt', all_pts, fmt='%.6f')
+
 
 
 if __name__ == "__main__":
-    main(fast)
+    main(orb)
