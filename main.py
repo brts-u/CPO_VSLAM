@@ -6,7 +6,9 @@ import laspy
 def fast(zdj): # TODO: coś nie działa z detectAndCompute
     szareZdjecie = cv2.cvtColor(zdj, cv2.COLOR_BGR2GRAY)  # Konwersja obrazu do postaci zdjęcia w odcieniach szarości
     fast = cv2.FastFeatureDetector.create()
-    kp, des = fast.detectAndCompute(szareZdjecie, None)
+    kp = fast.detect(szareZdjecie, None)
+    orb = cv2.ORB_create()
+    kp, des = orb.compute(szareZdjecie, kp)
     img = cv2.drawKeypoints(szareZdjecie, kp, None, color=(255, 0, 0))
     return img, kp, des
 
@@ -20,7 +22,7 @@ def orb(zdj):
 
 cap = cv2.VideoCapture(r'C:\aszkola\6 sem\cyfrowe przetwarzanie obrazow\CPO_VSLAM\szczeki2.mp4')
 if os.environ['COMPUTERNAME'] == 'LAPTOP-5E0LJ6KE': # dla laptopa Bartka
-    cap = cv2.VideoCapture(r'szczeki2.mp4')
+    cap = cv2.VideoCapture(r'aula1.mp4')
 
 def write_las(points, file_path='pcd.laz'):
     # Calculate offsets and scales
@@ -71,8 +73,8 @@ def main(detector = orb):
    
     global_points = []
     # Macierz transformacji (4x4) opisująca, gdzie jest kamera w świecie
-    global_pose = np.eye(4) 
-    prev_pose = np.eye(4)
+    global_pose = np.hstack((np.eye(3), np.zeros((3, 1))))
+    prev_pose = np.hstack((np.eye(3), np.zeros((3, 1))))
 
     #macierz projekcji : rotacja jednostkowa - brak obrotu, translacja zerowa (brak przesunięcia)
     P1 = K @ np.hstack((np.eye(3), np.zeros((3,1)))) # => 4x4 
@@ -114,18 +116,18 @@ def main(detector = orb):
         pts1_in = pts1[inliers] 
         pts2_in = pts2[inliers] 
 
-        retval, R, T, mask_pose = cv2.recoverPose(E, pts1_in, pts2_in, K) 
+        retval, R, T, mask_pose = cv2.recoverPose(E, pts1_in, pts2_in, K)
 
-        #macierz transformacji miedzy klatkami
-        Trel = np.eye(4)
-        Trel[:3,:3]=R
-        Trel[:3,3] = T.flatten()
+        # macierz transformacji miedzy klatkami
+        H = np.eye(4)
+        H[:3, :3] = R
+        H[:3, 3] = T.reshape(3)
 
-        #global_pose = global_pose @ np.linalg.inv(Trel)
-        global_pose = global_pose @ Trel
+        # global_pose = global_pose @ np.linalg.inv(Trel)
+        global_pose = global_pose @ H
 
-        P1 = K @ prev_pose[:3, :]
-        P2 = K @ global_pose[:3, :]
+        P1 = K @ prev_pose
+        P2 = K @ global_pose
 
         points3D = cv2.triangulatePoints(P1, P2, pts1_in.T, pts2_in.T) #zwraca P = XYZW (4 x N)
         #normalizacja:
@@ -151,8 +153,9 @@ def main(detector = orb):
 
     print('Zapisywanie chmury punktów')
     all_pts = np.vstack(global_points)
-    write_las(all_pts)
+    np.savetxt('points.txt', all_pts, fmt='%.6f')
+    # write_las(all_pts, 'nowe.laz')
 
 
 if __name__ == "__main__":
-    main(orb)
+    main(fast)
